@@ -41,12 +41,12 @@ impl Thermostat {
 #[allow(unused)]
 #[derive(serde::Deserialize, Debug)]
 pub struct RawThermostatData {
-    setpoint: f64,
-    temperature: f64,
+    pub setpoint: f64,
+    pub temperature: f64,
     #[serde(deserialize_with = "de::opt_f64")]
-    outside: Option<f64>,
-    pause: bool,
-    heating: bool,
+    pub outside: Option<f64>,
+    pub pause: bool,
+    pub heating: bool,
 }
 
 mod de {
