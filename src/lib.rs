@@ -2,39 +2,47 @@ use bytes::Buf;
 use reqwest::{redirect::Policy, Client, Url};
 use url::ParseError;
 
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error(transparent)]
+    ParseError(#[from] ParseError),
+    #[error(transparent)]
+    NetworkError(#[from] reqwest::Error),
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
 pub struct Thermostat {
     client: Client,
     base_url: Url,
 }
 
 impl Thermostat {
-    pub fn new(endpoint: &str) -> Self {
-        let base_url = Url::parse(endpoint)
-            .or_else(|e| match e {
-                ParseError::RelativeUrlWithoutBase => Url::parse(&format!("http://{endpoint}")),
-                err => Err(err),
-            })
-            .unwrap();
-        Self {
+    pub fn create(endpoint: &str) -> Result<Self> {
+        let base_url = Url::parse(endpoint).or_else(|e| match e {
+            ParseError::RelativeUrlWithoutBase => Url::parse(&format!("http://{endpoint}")),
+            err => Err(err),
+        })?;
+        let thermostat = Self {
             client: Client::builder()
                 .redirect(Policy::limited(1))
                 .build()
-                .unwrap(),
+                .expect("unable to build reqwest client from builder"),
             base_url,
-        }
+        };
+        Ok(thermostat)
     }
 
-    pub async fn get_status(&self) -> RawThermostatData {
+    pub async fn get_status(&self) -> Result<RawThermostatData> {
         let body = self
             .client
             .get(self.base_url.join("thermostat.xml").unwrap())
             .send()
-            .await
-            .unwrap()
+            .await?
             .bytes()
-            .await
-            .unwrap();
-        serde_xml_rs::from_reader(body.reader()).unwrap()
+            .await?;
+        let data = serde_xml_rs::from_reader(body.reader()).unwrap();
+        Ok(data)
     }
 }
 

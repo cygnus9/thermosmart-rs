@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use clap::Parser;
 use thermosmart::Thermostat;
 
@@ -7,9 +9,11 @@ struct Args {
 }
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() {
+async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    let thermostat = Thermostat::new(&args.endpoint);
-    println!("status: {:?}", thermostat.get_status().await);
+    let thermostat = Thermostat::create(&args.endpoint)?;
+    println!("status: {:?}", thermostat.get_status().await?);
+
+    Ok(())
 }
